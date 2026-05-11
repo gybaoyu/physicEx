@@ -1,0 +1,43 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 设置中文字体（避免中文显示为方框）
+plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial']
+plt.rcParams['axes.unicode_minus'] = False
+
+# ========== 1. 伏安特性曲线 ==========
+voltage = [0, 1, 2, 3, 4, 5]          # 电压 (V)
+current_vi = [0, 0.26, 0.52, 0.79, 1.06, 1.33]  # 电流 (mA)
+
+# ========== 2. 光照特性曲线 ==========
+angle = [0, 15, 30, 45, 60, 75, 90]   # 偏振器角度 (度)
+current_light = [1.37, 1.30, 1.08, 0.80, 0.45, 0.17, 0.16]  # 电流 (mA)
+
+# 创建画布，1行2列
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+# --- 左图：伏安特性曲线 ---
+ax1 = axes[0]
+ax1.plot(voltage, current_vi, 'bo-', linewidth=1.5, markersize=6, label='测量数据')
+# 线性拟合
+coeff = np.polyfit(voltage, current_vi, 1)
+fit_line = np.polyval(coeff, voltage)
+ax1.plot(voltage, fit_line, 'r--', linewidth=1.2, label=f'线性拟合 (y={coeff[0]:.3f}x+{coeff[1]:.3f})')
+ax1.set_xlabel('电压 (V)')
+ax1.set_ylabel('电流 (mA)')
+ax1.set_title('光敏电阻伏安特性曲线')
+ax1.legend()
+ax1.grid(True, linestyle='--', alpha=0.7)
+
+# --- 右图：光照特性曲线 ---
+ax2 = axes[1]
+ax2.plot(angle, current_light, 'mo-', linewidth=1.5, markersize=6, label='测量数据')
+ax2.set_xlabel('偏振器角度 (度)')
+ax2.set_ylabel('电流 (mA)')
+ax2.set_title('光敏电阻光照特性曲线')
+ax2.legend()
+ax2.grid(True, linestyle='--', alpha=0.7)
+
+plt.tight_layout()
+plt.savefig('光敏电阻特性曲线.png', dpi=300, bbox_inches='tight')
+plt.show()
