@@ -1,0 +1,131 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+ 
+# -----------------------------
+# 1) 原始数据（单位：mm）
+# -----------------------------
+rings = [24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5]
+
+left = [
+ 18.917, 18.661, 18.571, 18.475, 18.381, 18.275, 18.160, 18.041, 17.932, 17.812, 17.692,
+ 17.572, 17.457, 17.325, 17.190, 17.040, 16.855, 16.725, 16.559, 16.355
+]
+
+right = [
+ 9.400, 9.491, 9.590, 9.721, 9.825, 9.920, 10.040, 10.157, 10.265, 10.400,
+ 10.565, 10.695, 10.820, 10.912, 11.015, 11.135, 11.305, 11.480, 11.672, 11.892
+]
+
+df = pd.DataFrame({
+ "环级数": rings,
+ "左侧位置_mm": left,
+ "右侧位置_mm": right
+})
+
+# 每一环直径 D = |左 - 右| (mm)
+df["D_mm"] = (df["左侧位置_mm"] - df["右侧位置_mm"]).abs()
+df["D2_mm2"] = df["D_mm"] ** 2
+
+# -----------------------------
+# 2) 逐差法配对并计算 R
+#    常用 m-n = p, 这里取 p=10
+# -----------------------------
+p = 10
+lam = 589.3e-9  # m
+
+rows = []
+for i in range(len(df) - p):
+ m_row = df.iloc[i]
+ n_row = df.iloc[i + p]
+
+ # 缺失值跳过
+ if pd.isna(m_row["D_mm"]) or pd.isna(n_row["D_mm"]):
+     continue
+
+ m = int(m_row["环级数"])
+ n = int(n_row["环级数"])
+
+ Dm_mm = m_row["D_mm"]
+ Dn_mm = n_row["D_mm"]
+
+ Dm2_mm2 = Dm_mm ** 2
+ Dn2_mm2 = Dn_mm ** 2
+ delta_mm2 = Dm2_mm2 - Dn2_mm2
+
+ # mm^2 -> m^2：乘 1e-6
+ delta_m2 = delta_mm2 * 1e-6
+
+ R_m = delta_m2 / (4 * (m - n) * lam)
+
+ rows.append({
+     "环级数m": m,
+     "m左侧位置_mm": m_row["左侧位置_mm"],
+     "m右侧位置_mm": m_row["右侧位置_mm"],
+     "Dm_mm": Dm_mm,
+     "Dm2_mm2": Dm2_mm2,
+
+     "环级数n": n,
+     "n左侧位置_mm": n_row["左侧位置_mm"],
+     "n右侧位置_mm": n_row["右侧位置_mm"],
+     "Dn_mm": Dn_mm,
+     "Dn2_mm2": Dn2_mm2,
+
+     "Dm2-Dn2_mm2": delta_mm2,
+     "R_m": R_m
+ })
+
+result = pd.DataFrame(rows)
+
+# ΔR 取相对平均值偏差
+R_mean = result["R_m"].mean()
+result["ΔR_m"] = result["R_m"] - R_mean
+
+# 可读性更好：再给出米制/毫米制
+result["R_mm"] = result["R_m"] * 1e3
+result["ΔR_mm"] = result["ΔR_m"] * 1e3
+
+# 排列列顺序
+result = result[
+ [
+     "环级数m", "m左侧位置_mm", "m右侧位置_mm", "Dm_mm", "Dm2_mm2",
+     "Dm2-Dn2_mm2",
+     "环级数n", "n左侧位置_mm", "n右侧位置_mm", "Dn_mm", "Dn2_mm2",
+     "R_m", "ΔR_m", "R_mm", "ΔR_mm"
+ ]
+]
+
+print("逐差法结果：")
+print(result.to_string(index=False))
+print(f"\n平均曲率半径 R̄ = {R_mean:.6f} m ({R_mean*1e3:.3f} mm)")
+
+# -----------------------------
+# 3) 导出与绘制表格
+# -----------------------------
+result.to_csv("newton_ring_result.csv", index=False, encoding="utf-8-sig")
+
+# 绘制表格图片
+plt.rcParams["font.sans-serif"] = ["SimHei", "Microsoft YaHei", "Arial Unicode MS"]
+plt.rcParams["axes.unicode_minus"] = False
+
+show_df = result.copy()
+for c in show_df.columns:
+ if show_df[c].dtype.kind in "fc":
+     show_df[c] = show_df[c].map(lambda x: f"{x:.6g}")
+
+fig, ax = plt.subplots(figsize=(22, 0.55 * len(show_df) + 2))
+ax.axis("off")
+tbl = ax.table(
+ cellText=show_df.values,
+ colLabels=show_df.columns,
+ loc="center",
+ cellLoc="center"
+)
+tbl.auto_set_font_size(False)
+tbl.set_fontsize(9)
+tbl.scale(1.0, 1.2)
+
+plt.title("牛顿环逐差法数据表", fontsize=14)
+plt.tight_layout()
+plt.savefig("newton_ring_table.png", dpi=300)
+plt.show()

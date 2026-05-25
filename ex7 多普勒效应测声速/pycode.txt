@@ -1,0 +1,83 @@
+import numpy as np
+import matplotlib.pyplot as plt
+# 解决中文显示问题
+plt.rcParams['font.sans-serif'] = ['SimHei']
+plt.rcParams['axes.unicode_minus'] = False
+
+# ---------------------- 全局实验参数 ----------------------
+f0 = 37700  # 换能器谐振频率，单位Hz
+t = 24      # 实验室温，单位℃
+# 24℃下干燥空气理论声速
+u_theory = 331.45 * np.sqrt((273.15 + t)/273.15)
+
+# ---------------------- 1. 多普勒效应测声速 ----------------------
+# 实验数据
+Vr_list = np.array([0.059, 0.068, 0.078, 0.087, 0.096]) # 小车速度，m/s
+f_near = np.array([37706, 37707, 37709, 37710, 37711])  # 靠近声源接收频率，Hz
+f_far = np.array([37694, 37692, 37692, 37689, 37689])   # 远离声源接收频率，Hz
+
+# 计算频移
+delta_f_near = f_near - f0
+delta_f_far = f0 - f_far
+delta_f_avg = (delta_f_near + delta_f_far)/2
+
+# 线性拟合 Δf = k1*Vr，k1=2f0/u
+k1, b1 = np.polyfit(Vr_list, delta_f_avg, 1)
+u_doppler = 2 * f0 / k1
+err_doppler = abs(u_doppler - u_theory)/u_theory * 100
+
+# 绘图
+plt.figure(figsize=(12, 5), dpi=100)
+plt.subplot(1, 2, 1)
+plt.scatter(Vr_list, delta_f_avg, c='r', s=50, label='实验测量点')
+plt.plot(Vr_list, k1*Vr_list + b1, 'b-', label=f'拟合曲线：Δf={k1:.2f}·Vr + {b1:.2f}')
+plt.xlabel('小车运动速度Vr (m/s)')
+plt.ylabel('平均频移Δf (Hz)')
+plt.title('多普勒效应频移-速度拟合')
+plt.legend()
+plt.grid(alpha=0.3)
+
+# ---------------------- 2. 相位法测声速 （修改部分）----------------------
+# 三列独立测量数据，每列6个点，同一列相邻点差1个波长，对应序号n=0~5
+col1 = np.array([24.765,25.700,26.600,27.500,28.405,29.300])  # 第一组测量（cm）
+col2 = np.array([25.000,25.903,26.830,27.730,28.770,29.530])  # 第二组测量（cm）
+col3 = np.array([25.220,26.140,27.050,27.953,28.900,29.800])  # 第三组测量（cm）
+
+# 拼接所有数据，每列序号都是0-5
+n_list = np.tile(np.arange(6), 3) # 生成序号：[0,1,2,3,4,5, 0,1,2,3,4,5, 0,1,2,3,4,5]
+x_list = np.concatenate([col1, col2, col3]) / 100 # 转换为m单位
+
+# 线性拟合 x = k2*n + b2，k2为波长λ
+k2, b2 = np.polyfit(n_list, x_list, 1)
+lam = k2
+u_phase = f0 * lam
+err_phase = abs(u_phase - u_theory)/u_theory * 100
+
+# 可选：逐差法计算波长（大学物理实验常用方法，和拟合结果互相验证）
+delta_x = 0
+for col in [col1, col2, col3]:
+    # 每列后3个减前3个，差3个波长
+    delta_x += np.mean(col[3:] - col[:3])
+lam_zhucha = (delta_x/3) / 3 / 100 # 除以3组，除以3个波长，转m
+u_phase_zhucha = f0 * lam_zhucha
+err_phase_zhucha = abs(u_phase_zhucha - u_theory)/u_theory * 100
+
+# 绘图
+plt.subplot(1, 2, 2)
+plt.scatter(n_list, x_list, c='g', s=50, label='实验测量点')
+plt.plot(n_list, k2*n_list + b2, 'orange', label=f'拟合曲线：x={k2*100:.3f}·n + {b2*100:.2f} (cm)')
+plt.xlabel('测量序号n（相邻序号差1个波长）')
+plt.ylabel('接收端位置x (m)')
+plt.title('相位法位置-序号拟合')
+plt.legend()
+plt.grid(alpha=0.3)
+
+plt.tight_layout()
+plt.show()
+
+# 输出结果
+print(f"===== 实验结果输出 =====")
+print(f"24℃下理论声速：{u_theory:.2f} m/s")
+print(f"多普勒效应法：测得声速{u_doppler:.2f} m/s，相对误差{err_doppler:.2f}%")
+print(f"相位法（线性拟合）：测得声速{u_phase:.2f} m/s，相对误差{err_phase:.2f}%")
+print(f"相位法（逐差法）：测得声速{u_phase_zhucha:.2f} m/s，相对误差{err_phase_zhucha:.2f}%")
