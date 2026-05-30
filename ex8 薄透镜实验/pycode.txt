@@ -1,0 +1,36 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.rcParams['font.sans-serif'] = ['SimHei']
+plt.rcParams['axes.unicode_minus'] = False
+
+# 数据准备
+times = np.arange(1,7)
+f_convex = [9.92,9.98,10.04,9.98,10.23,9.88]
+f_concave_abs = [5.49,5.00,5.40,5.00,5.00,5.00]
+
+# 画凸透镜测量结果
+plt.figure(figsize=(12,5))
+plt.subplot(1,2,1)
+plt.bar(times, f_convex, width=0.6, label='单次测量值')
+plt.axhline(y=10.0, color='r', linestyle='--', label='标称值10.00cm')
+plt.axhline(y=np.mean(f_convex), color='g', linestyle='-.', label=f'平均值{np.mean(f_convex):.2f}cm')
+plt.xlabel('测量次数')
+plt.ylabel('凸透镜焦距/cm')
+plt.title('凸透镜焦距测量结果对比')
+plt.legend()
+plt.grid(axis='y', alpha=0.3)
+
+# 画凹透镜测量结果
+plt.subplot(1,2,2)
+plt.bar(times, f_concave_abs, width=0.6, label='单次测量值')
+plt.axhline(y=5.0, color='r', linestyle='--', label='标称值5.00cm')
+plt.axhline(y=np.mean(f_concave_abs), color='g', linestyle='-.', label=f'平均值{np.mean(f_concave_abs):.2f}cm')
+plt.xlabel('测量次数')
+plt.ylabel('凹透镜焦距绝对值/cm')
+plt.title('凹透镜焦距测量结果对比')
+plt.legend()
+plt.grid(axis='y', alpha=0.3)
+
+plt.tight_layout()
+plt.show()
